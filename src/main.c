@@ -14,7 +14,7 @@
  * 
  * Until then, pressing 'p' to play will show an error message.
  */
-
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -126,7 +126,7 @@ void initialize_tree() {
      * in ds.c (TODOs 1-2), uncomment the code below to create the initial tree.
      */
     
-    /* UNCOMMENT THIS CODE AFTER IMPLEMENTING TODOs 1-2:
+    // NCOMMENT THIS CODE AFTER IMPLEMENTING TODOs 1-2:
     
     if (g_root != NULL) {
         free_tree(g_root);
@@ -137,10 +137,9 @@ void initialize_tree() {
     water->no = create_animal_node("Dog");
     g_root = water;
     
-    h_free(&g_index);
-    h_init(&g_index, 31);
+    // h_free(&g_index);
+    // h_init(&g_index, 31);
     
-    */
 }
 
 int main() {

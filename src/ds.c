@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -15,7 +16,16 @@
  */
 Node *create_question_node(const char *question) {
     // TODO: Implement this function
-    return NULL;
+    if (question == NULL) return NULL;
+
+    Node *node = malloc(sizeof(Node));
+    if (!node) return NULL;
+
+    node->text = strdup(question);
+    node->isQuestion = 1;
+    node->yes = NULL;
+    node->no = NULL;
+    return node;
 }
 
 /* TODO 2: Implement create_animal_node
@@ -24,7 +34,16 @@ Node *create_question_node(const char *question) {
  */
 Node *create_animal_node(const char *animal) {
     // TODO: Implement this function
-    return NULL;
+    if (animal == NULL) return NULL;
+
+    Node *node = malloc(sizeof(Node));
+    if (!node) return NULL;
+
+    node->text = strdup(animal);
+    node->isQuestion = 0;
+    node->yes = NULL;
+    node->no = NULL;
+    return node;
 }
 
 /* TODO 3: Implement free_tree (recursive)
@@ -38,6 +57,13 @@ Node *create_animal_node(const char *animal) {
  */
 void free_tree(Node *node) {
     // TODO: Implement this function
+    if (node == NULL) return;
+
+    free_tree(node->yes);
+    free_tree(node->no);
+
+    free(node->text);
+    free(node);
 }
 
 /* TODO 4: Implement count_nodes (recursive)
@@ -46,7 +72,8 @@ void free_tree(Node *node) {
  */
 int count_nodes(Node *root) {
     // TODO: Implement this function
-    return 0;
+    if (root == NULL) return 0;
+    return 1 + count_nodes(root->yes) + count_nodes(root->no);
 }
 
 /* ========== Frame Stack (for iterative tree traversal) ========== */
@@ -58,6 +85,11 @@ int count_nodes(Node *root) {
  */
 void fs_init(FrameStack *s) {
     // TODO: Implement this function
+    if (s == NULL) return;
+
+    s->capacity = 16;
+    s->size = 0;
+    s->frames = malloc(s->capacity * sizeof(Frame));
 }
 
 /* TODO 6: Implement fs_push
@@ -68,6 +100,13 @@ void fs_init(FrameStack *s) {
  */
 void fs_push(FrameStack *s, Node *node, int answeredYes) {
     // TODO: Implement this function
+    if (s->size >= s->capacity) {
+        s->capacity *= 2;
+        s->frames = realloc(s->frames, s->capacity * sizeof(Frame));
+    }
+    s->frames[s->size].node = node;
+    s->frames[s->size].answeredYes = answeredYes;
+    s->size++;
 }
 
 /* TODO 7: Implement fs_pop
@@ -78,7 +117,9 @@ void fs_push(FrameStack *s, Node *node, int answeredYes) {
 Frame fs_pop(FrameStack *s) {
     Frame dummy = {NULL, -1};
     // TODO: Implement this function
-    return dummy;
+    if (s->size == 0) return dummy;
+    s->size--;
+    return s->frames[s->size];
 }
 
 /* TODO 8: Implement fs_empty
@@ -86,7 +127,7 @@ Frame fs_pop(FrameStack *s) {
  */
 int fs_empty(FrameStack *s) {
     // TODO: Implement this function
-    return 1;
+    return s->size == 0;
 }
 
 /* TODO 9: Implement fs_free
@@ -96,6 +137,10 @@ int fs_empty(FrameStack *s) {
  */
 void fs_free(FrameStack *s) {
     // TODO: Implement this function
+    free(s->frames);
+    s->frames = NULL;
+    s->size = 0;
+    s->capacity = 0;
 }
 
 /* ========== Edit Stack (for undo/redo) ========== */
@@ -105,6 +150,9 @@ void fs_free(FrameStack *s) {
  */
 void es_init(EditStack *s) {
     // TODO: Implement this function
+    s->capacity = 16;
+    s->size = 0;
+    s->edits = malloc(s->capacity * sizeof(Edit));
 }
 
 /* TODO 11: Implement es_push
@@ -114,6 +162,11 @@ void es_init(EditStack *s) {
  */
 void es_push(EditStack *s, Edit e) {
     // TODO: Implement this function
+    if (s->size >= s->capacity) {
+        s->capacity *= 2;
+        s->edits = realloc(s->edits, s->capacity * sizeof(Edit));
+    }
+    s->edits[s->size++] = e;
 }
 
 /* TODO 12: Implement es_pop
@@ -122,7 +175,8 @@ void es_push(EditStack *s, Edit e) {
 Edit es_pop(EditStack *s) {
     Edit dummy = {0};
     // TODO: Implement this function
-    return dummy;
+    if (s->size == 0) return dummy;
+    return s->edits[--s->size];
 }
 
 /* TODO 13: Implement es_empty
@@ -130,7 +184,7 @@ Edit es_pop(EditStack *s) {
  */
 int es_empty(EditStack *s) {
     // TODO: Implement this function
-    return 1;
+    return s->size == 0;
 }
 
 /* TODO 14: Implement es_clear
@@ -139,6 +193,7 @@ int es_empty(EditStack *s) {
  */
 void es_clear(EditStack *s) {
     // TODO: Implement this function
+    s->size = 0;
 }
 
 void es_free(EditStack *s) {
@@ -160,6 +215,9 @@ void free_edit_stack(EditStack *s) {
  */
 void q_init(Queue *q) {
     // TODO: Implement this function
+    q->front = NULL;
+    q->rear = NULL;
+    q->size = 0;
 }
 
 /* TODO 16: Implement q_enqueue
@@ -175,6 +233,18 @@ void q_init(Queue *q) {
  */
 void q_enqueue(Queue *q, Node *node, int id) {
     // TODO: Implement this function
+    QueueNode *newNode = malloc(sizeof(QueueNode));
+    newNode->treeNode = node;
+    newNode->id = id;
+    newNode->next = NULL;
+
+    if (q->rear == NULL) {
+        q->front = q->rear = newNode;
+    } else {
+        q->rear->next = newNode;
+        q->rear = newNode;
+    }
+    q->size++;
 }
 
 /* TODO 17: Implement q_dequeue
@@ -189,7 +259,16 @@ void q_enqueue(Queue *q, Node *node, int id) {
  */
 int q_dequeue(Queue *q, Node **node, int *id) {
     // TODO: Implement this function
-    return 0;
+    if (q->front == NULL) return 0;
+    QueueNode *temp = q->front;
+    *node = temp->treeNode;
+    *id = temp->id;
+    q->front = temp->next;
+    if (q->front == NULL)
+        q->rear = NULL;
+    free(temp);
+    q->size--;
+    return 1;
 }
 
 /* TODO 18: Implement q_empty
@@ -197,7 +276,7 @@ int q_dequeue(Queue *q, Node **node, int *id) {
  */
 int q_empty(Queue *q) {
     // TODO: Implement this function
-    return 1;
+    return q->size == 0;
 }
 
 /* TODO 19: Implement q_free
@@ -206,6 +285,9 @@ int q_empty(Queue *q) {
  */
 void q_free(Queue *q) {
     // TODO: Implement this function
+    Node *n;
+    int id;
+    while (q_dequeue(q, &n, &id));
 }
 
 /* ========== Hash Table ========== */
@@ -230,7 +312,17 @@ void q_free(Queue *q) {
  */
 char *canonicalize(const char *s) {
     // TODO: Implement this function
-    return NULL;
+    char *res = malloc(strlen(s) + 1);
+    int j = 0;
+    for (int i = 0; s[i]; i++) {
+        if (isalnum((unsigned char)s[i])) {
+            res[j++] = tolower((unsigned char)s[i]);
+        } else if (isspace((unsigned char)s[i])) {
+            res[j++] = '_';
+        }
+    }
+    res[j] = '\0';
+    return res;
 }
 
 /* TODO 21: Implement h_hash (djb2 algorithm)
@@ -241,7 +333,11 @@ char *canonicalize(const char *s) {
  */
 unsigned h_hash(const char *s) {
     // TODO: Implement this function
-    return 0;
+    unsigned hash = 5381;
+    int c;
+    while ((c = *s++)) 
+        hash = ((hash << 5) + hash) + c; 
+    return hash;
 }
 
 /* TODO 22: Implement h_init
@@ -251,6 +347,9 @@ unsigned h_hash(const char *s) {
  */
 void h_init(Hash *h, int nbuckets) {
     // TODO: Implement this function
+    h->nbuckets = nbuckets;
+    h->size = 0;
+    h->buckets = calloc(nbuckets, sizeof(Entry *));
 }
 
 /* TODO 23: Implement h_put
@@ -267,13 +366,42 @@ void h_init(Hash *h, int nbuckets) {
  *    - Create new Entry with strdup(key)
  *    - Initialize vals with initial capacity (e.g., 4)
  *    - Add animalId as first element
- *    - Insert at head of chain (buckets[idx])
+ *    - Inbucketssert at head of chain (buckets[idx])
  *    - Increment h->size
  *    - Return 1
  */
 int h_put(Hash *h, const char *key, int animalId) {
     // TODO: Implement this function
-    return 0;
+    unsigned idx = h_hash(key) % h->nbuckets;
+    Entry *current = h->buckets[idx];
+    while (current) {
+        if (strcmp(current->key, key) == 0) {
+            for (int i = 0; i < current->vals.count; i++) {
+                if (current->vals.ids[i] == animalId) {
+                    return 0; // Already exists
+                }
+            }
+            // Add animalId
+            if (current->vals.count >= current->vals.capacity) {
+                current->vals.capacity *= 2;
+                current->vals.ids = realloc(current->vals.ids, current->vals.capacity * sizeof(int));
+            }
+            current->vals.ids[current->vals.count++] = animalId;
+            return 1;
+        }
+        current = current->next;
+    }
+    // Not found, create new entry
+    Entry *newEntry = malloc(sizeof(Entry));
+    newEntry->key = strdup(key);
+    newEntry->vals.count = 1;
+    newEntry->vals.capacity = 4;
+    newEntry->vals.ids = malloc(newEntry->vals.capacity * sizeof(int));
+    newEntry->vals.ids[0] = animalId;
+    newEntry->next = h->buckets[idx];
+    h->buckets[idx] = newEntry;
+    h->size++;
+    return 1;
 }
 
 /* TODO 24: Implement h_contains
@@ -287,6 +415,15 @@ int h_put(Hash *h, const char *key, int animalId) {
  */
 int h_contains(const Hash *h, const char *key, int animalId) {
     // TODO: Implement this function
+    unsigned idx = h_hash(key) % h->nbuckets;
+    for (Entry *current = h->buckets[idx]; current != NULL; current = current->next) {
+        if (strcmp(current->key, key) == 0) {
+            for (int i = 0; i < current->vals.count; i++) {
+                if (current->vals.ids[i] == animalId)
+                    return 1; // Found
+            }
+        }
+    }
     return 0;
 }
 
@@ -307,6 +444,13 @@ int h_contains(const Hash *h, const char *key, int animalId) {
  */
 int *h_get_ids(const Hash *h, const char *key, int *outCount) {
     // TODO: Implement this function
+    unsigned idx = h_hash(key) % h->nbuckets;
+    for (Entry *current = h->buckets[idx]; current != NULL; current = current->next) {
+        if (strcmp(current->key, key) == 0) {
+            *outCount = current->vals.count;
+            return current->vals.ids;
+        }
+    }
     *outCount = 0;
     return NULL;
 }
@@ -326,4 +470,18 @@ int *h_get_ids(const Hash *h, const char *key, int *outCount) {
  */
 void h_free(Hash *h) {
     // TODO: Implement this function
+    for (int i = 0; i < h->nbuckets; i++) {
+        Entry *current = h->buckets[i];
+        while (current) {
+            Entry *temp = current;
+            current = current->next;
+            free(temp->key);
+            free(temp->vals.ids);
+            free(temp);
+        }
+    }
+    free(h->buckets);
+    h->buckets = NULL;
+    h->size = 0;
+    h->nbuckets = 0;
 }
