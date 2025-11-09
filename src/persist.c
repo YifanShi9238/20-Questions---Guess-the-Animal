@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -45,11 +46,83 @@ typedef struct {
  *    - Write yesId, noId
  * 7. Clean up and return 1 on success
  */
+
+ // https://chatgpt.com/share/690f9b07-6af0-8009-9de7-4b803f83f797
 int save_tree(const char *filename) {
-    // TODO: Implement this function
-    // This is complex - break it into smaller steps
-    // You'll need to use the Queue functions you implemented
-    return 0;
+    if (g_root == NULL)
+        return 0;
+
+    FILE *f = fopen(filename, "wb");
+    if (!f)
+        return 0;
+
+    Queue q;
+    q_init(&q);
+
+    NodeMapping *map = malloc(sizeof(NodeMapping) * 10000);
+    int mapCount = 0;
+
+    // Enqueue root
+    q_enqueue(&q, g_root, 0);
+    map[0].node = g_root;
+    map[0].id = 0;
+    mapCount = 1;
+
+    // BFS traversal to assign IDs
+    while (!q_empty(&q)) {
+        Node *curr;
+        int currId;
+        q_dequeue(&q, &curr, &currId);
+
+        if (curr->yes) {
+            map[mapCount].node = curr->yes;
+            map[mapCount].id = mapCount;
+            q_enqueue(&q, curr->yes, mapCount);
+            mapCount++;
+        }
+        if (curr->no) {
+            map[mapCount].node = curr->no;
+            map[mapCount].id = mapCount;
+            q_enqueue(&q, curr->no, mapCount);
+            mapCount++;
+        }
+    }
+
+    // Write header
+    uint32_t magic = MAGIC, version = VERSION, count = mapCount;
+    fwrite(&magic, sizeof(uint32_t), 1, f);
+    fwrite(&version, sizeof(uint32_t), 1, f);
+    fwrite(&count, sizeof(uint32_t), 1, f);
+
+    // Helper: find ID by node pointer
+    auto int find_id(Node *n) {
+        if (!n)
+            return -1;
+        for (int i = 0; i < mapCount; i++)
+            if (map[i].node == n)
+                return map[i].id;
+        return -1;
+    }
+
+    // Write nodes in mapping order
+    for (int i = 0; i < mapCount; i++) {
+        Node *n = map[i].node;
+        uint8_t isQ = (uint8_t)n->isQuestion;
+        uint32_t len = (uint32_t)strlen(n->text);
+        int32_t yesId = find_id(n->yes);
+        int32_t noId = find_id(n->no);
+
+        fwrite(&isQ, sizeof(uint8_t), 1, f);
+        fwrite(&len, sizeof(uint32_t), 1, f);
+        fwrite(n->text, sizeof(char), len, f);
+        fwrite(&yesId, sizeof(int32_t), 1, f);
+        fwrite(&noId, sizeof(int32_t), 1, f);
+    }
+
+    free(map);
+    q_free(&q);
+    fclose(f);
+    return 1;
 }
 
 /* TODO 28: Implement load_tree
@@ -83,8 +156,86 @@ int save_tree(const char *filename) {
  * - In load_error: free all allocated memory and return 0
  */
 int load_tree(const char *filename) {
-    // TODO: Implement this function
-    // This is the most complex function in the lab
-    // Take it step by step and test incrementally
+    FILE *f = fopen(filename, "rb");
+    if (!f)
+        return 0;
+
+    uint32_t magic, version, count;
+    if (fread(&magic, sizeof(uint32_t), 1, f) != 1 ||
+        fread(&version, sizeof(uint32_t), 1, f) != 1 ||
+        fread(&count, sizeof(uint32_t), 1, f) != 1) {
+        fclose(f);
+        return 0;
+    }
+
+    if (magic != MAGIC || version != VERSION || count == 0) {
+        fclose(f);
+        return 0;
+    }
+
+    Node **nodes = calloc(count, sizeof(Node *));
+    int32_t *yesIds = calloc(count, sizeof(int32_t));
+    int32_t *noIds = calloc(count, sizeof(int32_t));
+
+    for (uint32_t i = 0; i < count; i++) {
+        uint8_t isQ;
+        uint32_t len;
+        if (fread(&isQ, sizeof(uint8_t), 1, f) != 1 ||
+            fread(&len, sizeof(uint32_t), 1, f) != 1) {
+            goto load_error;
+        }
+        if (len > 10000)
+            goto load_error;
+
+        char *buf = malloc(len + 1);
+        if (!buf || fread(buf, sizeof(char), len, f) != len) {
+            free(buf);
+            goto load_error;
+        }
+        buf[len] = '\0';
+
+        int32_t yesId, noId;
+        if (fread(&yesId, sizeof(int32_t), 1, f) != 1 ||
+            fread(&noId, sizeof(int32_t), 1, f) != 1) {
+            free(buf);
+            goto load_error;
+        }
+
+        nodes[i] = isQ ? create_question_node(buf)
+                       : create_animal_node(buf);
+        yesIds[i] = yesId;
+        noIds[i] = noId;
+
+        free(buf);
+    }
+
+    // Rebuild links
+    for (uint32_t i = 0; i < count; i++) {
+        if (yesIds[i] >= 0 && yesIds[i] < (int32_t)count)
+            nodes[i]->yes = nodes[yesIds[i]];
+        if (noIds[i] >= 0 && noIds[i] < (int32_t)count)
+            nodes[i]->no = nodes[noIds[i]];
+    }
+
+    if (g_root)
+        free_tree(g_root);
+    g_root = nodes[0];
+
+    free(nodes);
+    free(yesIds);
+    free(noIds);
+    fclose(f);
+    return 1;
+
+load_error:
+    if (nodes) {
+        for (uint32_t i = 0; i < count; i++)
+            if (nodes[i])
+                free(nodes[i]);
+        free(nodes);
+    }
+    free(yesIds);
+    free(noIds);
+    fclose(f);
     return 0;
 }

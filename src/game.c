@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -65,7 +66,95 @@ void play_game() {
     fs_init(&stack);
     
     // TODO: Your implementation here
-    
+    fs_push(&stack, g_root, -1);
+
+    Node *parent = NULL;
+    int parentAnswer = -1;
+    int guessedCorrectly = 0;
+
+    while(!fs_empty(&stack)) {
+        Frame frame = fs_pop(&stack);
+        Node *current = frame.node;
+
+        // Question node
+        if (current->isQuestion == 1) {
+            int answer = get_yes_no(5, 2, current->text);
+            parent = current;
+            parentAnswer = answer;
+
+            if (answer) {
+                fs_push(&stack, current->yes, 1);
+            } else {
+                fs_push(&stack, current->no, 0);
+            }
+        }
+
+        //Animal (leaf) node
+        else {
+            char prompt[256];
+            snprintf(prompt, sizeof(prompt), "Is it a %s?", current->text);
+            int answer = get_yes_no(7, 2, prompt);
+
+            clear();
+            attron(COLOR_PAIR(5) | A_BOLD);
+            mvprintw(0, 0, "%-80s", " Playing 20 Questions");
+            attroff(COLOR_PAIR(5) | A_BOLD);
+
+            if (answer) {
+                attron(COLOR_PAIR(5) | A_BOLD);
+                mvprintw(9, 2, "Yay! I guessed it right!");
+                attroff(COLOR_PAIR(5) | A_BOLD);
+                refresh();
+                getch();
+                guessedCorrectly = 1;
+                break;
+            } else {
+                // Learning phase
+                char *correctAnimal = get_input(9, 2, "I give up! What animal were you thinking of? ");
+                char *distinguishingQuestion = get_input(11, 2, "Please provide a question that distinguishes your animal: ");
+                int newAnswer = get_yes_no(13, 2, "For your animal, what is the answer to that question? (y/n) ");
+
+                // Create new nodes
+                Node *newAnimal = create_animal_node(correctAnimal);
+                Node *newQuestion = create_question_node(distinguishingQuestion);
+                if (newAnswer) {
+                    newQuestion->yes = newAnimal;
+                    newQuestion->no = current;
+                } else {
+                    newQuestion->no = newAnimal;
+                    newQuestion->yes = current;
+                }
+            
+                // Update parent pointer or g_root
+                if (parent == NULL) {
+                    g_root = newQuestion;
+                } else if (parentAnswer == 1) {
+                    parent->yes = newQuestion;
+                } else {
+                    parent->no = newQuestion;
+                }
+
+                // Record edit for undo/redo
+                Edit edit;
+                edit.parent = parent;
+                edit.oldLeaf = current;
+                edit.newLeaf = newAnimal;
+                edit.newQuestion = newQuestion;
+                edit.wasYesChild = (parentAnswer == 1);
+                es_push(&g_undo, edit);
+                es_clear(&g_redo);
+
+                attron(COLOR_PAIR(5) | A_BOLD);
+                mvprintw(15, 2, "Thanks! I've learned something new.");
+                attroff(COLOR_PAIR(5) | A_BOLD);
+                refresh();
+                getch();
+                break;
+            }     
+        }   
+        refresh();
+    }
+
     fs_free(&stack);
 }
 
@@ -89,7 +178,22 @@ void play_game() {
  */
 int undo_last_edit() {
     // TODO: Implement this function
-    return 0;
+    if (es_empty(&g_undo))
+        return 0;
+
+    Edit edit = es_pop(&g_undo);
+
+    if (edit.parent == NULL) {
+        g_root = edit.oldLeaf;
+    } else if (edit.wasYesChild) {
+        edit.parent->yes = edit.oldLeaf;
+    } else {
+        edit.parent->no = edit.oldLeaf;
+    }
+
+    es_push(&g_redo, edit);
+
+    return 1;
 }
 
 /* TODO 33: Implement redo_last_edit
@@ -110,5 +214,21 @@ int undo_last_edit() {
  */
 int redo_last_edit() {
     // TODO: Implement this function
-    return 0;
+    if (es_empty(&g_redo))
+        return 0;
+
+    Edit edit = es_pop(&g_redo);
+
+    if (edit.parent == NULL) {
+        g_root = edit.newQuestion;
+    } else if (edit.wasYesChild) {
+        edit.parent->yes = edit.newQuestion;
+    } else {
+        edit.parent->no = edit.newQuestion;
+    }
+
+    es_push(&g_undo, edit);
+
+    return 1;
 }
+

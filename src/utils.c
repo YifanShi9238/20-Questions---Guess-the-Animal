@@ -30,7 +30,38 @@ extern Node *g_root;
 int check_integrity() {
     // TODO: Implement this function
     // Use the Queue functions you implemented
-    return 1;
+    // 1. Return 1 if g_root is NULL (empty tree is valid)
+    if (g_root == NULL)
+        return 1;
+
+    Queue q;
+    q_init(&q);
+    q_enqueue(&q, g_root, 0);
+    int valid = 1;
+
+    // BFS traversal to check integrity
+    while (!q_empty(&q)) {
+        Node *curr;
+        int currId;
+        q_dequeue(&q, &curr, &currId);
+
+        if (curr->isQuestion) {
+            if (curr->yes == NULL || curr->no == NULL) {
+                valid = 0;
+                break;
+            }
+            q_enqueue(&q, curr->yes, 0);
+            q_enqueue(&q, curr->no, 0);
+        } else {
+            if (curr->yes != NULL || curr->no != NULL) {
+                valid = 0;
+                break;
+            }
+        }
+    }
+
+    q_free(&q);
+    return valid;
 }
 
 typedef struct PathNode {
@@ -59,7 +90,10 @@ typedef struct PathNode {
  * - Print the distinguishing questions from LCA to each animal
  */
 void find_shortest_path(const char *animal1, const char *animal2) {
-    if (g_root == NULL) return;
+    if (g_root == NULL) {
+        printf("Tree is empty\n");
+        return;
+    }
     
     // TODO: Implement this function (OPTIONAL CHALLENGE)
     // This is complex and requires careful path tracking

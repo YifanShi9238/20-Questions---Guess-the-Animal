@@ -81,18 +81,6 @@ After learning about Bird:
                             "Bird"        "Dog"
 ```
 
-### What You'll Learn
-
-By completing this lab, you will:
-- ✅ Improve your skills in manual memory management in C (malloc/free)
-- ✅ Implement iterative algorithms using explicit stacks
-- ✅ Build multiple data structures from scratch
-- ✅ Work with binary file I/O and serialization
-- ✅ Handle complex pointer relationships
-- ✅ Debug with valgrind and gdb
-- ✅ Design undo/redo systems
-- ✅ Manage a multi-week project
-
 ### Project Scope
 
 **Time Required**: 33-49 hours total
