@@ -47,15 +47,22 @@ typedef struct {
  * 7. Clean up and return 1 on success
  */
 
- // https://chatgpt.com/share/690f9b07-6af0-8009-9de7-4b803f83f797
 int save_tree(const char *filename) {
+    // 1. Return 0 if g_root is NULL
     if (g_root == NULL)
         return 0;
-
+    // 2. Open file for writing binary ("wb")
     FILE *f = fopen(filename, "wb");
     if (!f)
         return 0;
-
+/* 4. Use BFS to assign IDs to all nodes:
+ *    - Enqueue root with id=0
+ *    - Store mapping[0] = {g_root, 0}
+ *    - While queue not empty:
+ *      - Dequeue node and id
+ *      - If node has yes child: add to mappings, enqueue with new id
+ *      - If node has no child: add to mappings, enqueue with new id
+ */
     Queue q;
     q_init(&q);
 
@@ -95,7 +102,7 @@ int save_tree(const char *filename) {
     fwrite(&count, sizeof(uint32_t), 1, f);
 
     // Helper: find ID by node pointer
-    auto int find_id(Node *n) {
+    int find_id(Node *n) {
         if (!n)
             return -1;
         for (int i = 0; i < mapCount; i++)

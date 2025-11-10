@@ -64,6 +64,12 @@ void play_game() {
     
     FrameStack stack;
     fs_init(&stack);
+
+    if (g_root == NULL) {
+    show_message("No knowledge yet! Please add an animal first.", 1);
+    fs_free(&stack);
+    return;
+    }
     
     // TODO: Your implementation here
     fs_push(&stack, g_root, -1);
@@ -117,10 +123,12 @@ void play_game() {
                 // Create new nodes
                 Node *newAnimal = create_animal_node(correctAnimal);
                 Node *newQuestion = create_question_node(distinguishingQuestion);
-                if (newAnswer) {
+                if (newAnswer == 1) {
+                    // Yes for the new question
                     newQuestion->yes = newAnimal;
                     newQuestion->no = current;
                 } else {
+                    // No for the new question
                     newQuestion->no = newAnimal;
                     newQuestion->yes = current;
                 }
@@ -143,7 +151,6 @@ void play_game() {
                 edit.wasYesChild = (parentAnswer == 1);
                 es_push(&g_undo, edit);
                 es_clear(&g_redo);
-
                 attron(COLOR_PAIR(5) | A_BOLD);
                 mvprintw(15, 2, "Thanks! I've learned something new.");
                 attroff(COLOR_PAIR(5) | A_BOLD);

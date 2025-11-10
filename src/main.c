@@ -137,8 +137,8 @@ void initialize_tree() {
     water->no = create_animal_node("Dog");
     g_root = water;
     
-    // h_free(&g_index);
-    // h_init(&g_index, 31);
+    h_free(&g_index);
+    h_init(&g_index, 31);
     
 }
 
