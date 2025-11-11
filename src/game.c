@@ -123,6 +123,7 @@ void play_game() {
                 // Create new nodes
                 Node *newAnimal = create_animal_node(correctAnimal);
                 Node *newQuestion = create_question_node(distinguishingQuestion);
+
                 if (newAnswer == 1) {
                     // Yes for the new question
                     newQuestion->yes = newAnimal;
